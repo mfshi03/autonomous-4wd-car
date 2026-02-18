@@ -70,7 +70,7 @@ class Ordinary_Car:
         self.right_upper_wheel(duty3)
         self.right_lower_wheel(duty4)
    
-    def turn_angle(self, angle, duration=0.8, turn_speed=1000):
+    def turn_angle(self, angle, duration=0.6, turn_speed=2000):
         """
         In-place rotation only.
         angle: 0 (hard left) to 180 (hard right), 90 is stop
