@@ -70,7 +70,7 @@ class Ordinary_Car:
         self.right_upper_wheel(duty3)
         self.right_lower_wheel(duty4)
    
-    def turn_angle(self, angle, turn_speed=1000):
+    def turn_angle(self, angle, duration=0.8, turn_speed=1000):
         """
         In-place rotation only.
         angle: 0 (hard left) to 180 (hard right), 90 is stop
@@ -85,12 +85,16 @@ class Ordinary_Car:
         left_speed  = int(-rotation * turn_speed)
         right_speed = int(rotation * turn_speed)
 
+
         self.set_motor_model(
             left_speed,   
             left_speed,   
             right_speed,  
             right_speed   
         )
+        
+        time.sleep(duration)
+        self.set_motor_model(0,0,0,0)
     
     def close(self):
         self.set_motor_model(0,0,0,0)
@@ -108,19 +112,19 @@ if __name__=='__main__':
         # PWM.set_motor_model(2000,2000,-2000,-2000)     #Right    
         # time.sleep(1)
         # PWM.set_motor_model(0,0,0,0)                   #Stop
+        print("Turning to absolute angle 0")
+        time.sleep(2)
         PWM.turn_angle(0)
-        time.sleep(1)
-
-        PWM.turn_angle(45)
-        time.sleep(1)
-
+        
+        print("Turning to absolute angle 90")
+        time.sleep(2)
         PWM.turn_angle(90) 
         time.sleep(1)
 
-        PWM.turn_angle(135)
-        time.sleep(1)
-
+        print("Turning to absolute angle 180")
+        time.sleep(2)
         PWM.turn_angle(180)
+        time.sleep(1)
     except KeyboardInterrupt: 
         print ("\nEnd of program")
     finally:
