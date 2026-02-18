@@ -88,14 +88,22 @@ class RobotApp:
                         best_angle = target_angle
                         self.status_text.set(f"Target found at {best_angle}°")
 
-                if max_area > 500:
-                    self.status_text.set(f"LOCKED! Turning to {best_angle}°")
+                if max_area > 300:
+                    self.status_text.set(f"LOCKED! Turning to {best_angle}° and moving forward")
                     time.sleep(1) 
+                    self.car.turn_angle(best_angle)
+                    self.car.set_motor_model(-2000,-2000,-2000,-2000)
+                    time.sleep(0.8)
+                    self.car.set_motor_model(0,0,0,0)
                 else:
                     self.status_text.set("Status: No target found. Resting...")
                     time.sleep(1)
 
+                self.mount.move_servo_slow('0', 90)
+
+
         except Exception as e:
+            self.mount.move_servo_slow('0', 90)
             print(f"Logic Error: {e}")
 
     def update_gui(self):

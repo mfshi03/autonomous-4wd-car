@@ -103,28 +103,28 @@ class Ordinary_Car:
 if __name__=='__main__':
     PWM = Ordinary_Car()          
     try:
-        # PWM.set_motor_model(2000,2000,2000,2000)       #Forward
-        # time.sleep(1)
-        # PWM.set_motor_model(-2000,-2000,-2000,-2000)   #Back
-        # time.sleep(1)
-        # PWM.set_motor_model(-2000,-2000,2000,2000)     #Left 
-        # time.sleep(1)
-        # PWM.set_motor_model(2000,2000,-2000,-2000)     #Right    
-        # time.sleep(1)
-        # PWM.set_motor_model(0,0,0,0)                   #Stop
-        print("Turning to absolute angle 0")
-        time.sleep(2)
-        PWM.turn_angle(0)
-        
-        print("Turning to absolute angle 90")
-        time.sleep(2)
-        PWM.turn_angle(90) 
+        PWM.set_motor_model(2000,2000,2000,2000)       #Forward
         time.sleep(1)
+        PWM.set_motor_model(-2000,-2000,-2000,-2000)   #Back
+        time.sleep(1)
+        PWM.set_motor_model(-2000,-2000,2000,2000)     #Left 
+        time.sleep(1)
+        PWM.set_motor_model(2000,2000,-2000,-2000)     #Right    
+        time.sleep(1)
+        PWM.set_motor_model(0,0,0,0)                   #Stop
+        #print("Turning to absolute angle 0")
+        #time.sleep(2)
+        #PWM.turn_angle(0)
+        #
+        #print("Turning to absolute angle 90")
+        #time.sleep(2)
+        #PWM.turn_angle(90) 
+        #time.sleep(1)
 
-        print("Turning to absolute angle 180")
-        time.sleep(2)
-        PWM.turn_angle(180)
-        time.sleep(1)
+        #print("Turning to absolute angle 180")
+        #time.sleep(2)
+        #PWM.turn_angle(180)
+        #time.sleep(1)
     except KeyboardInterrupt: 
         print ("\nEnd of program")
     finally:
