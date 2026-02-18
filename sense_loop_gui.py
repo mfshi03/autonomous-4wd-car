@@ -115,7 +115,7 @@ class RobotApp:
         """Safely shuts down motors and camera."""
         print("Shutting down...")
         self.running = False
-        self.mount.move_servo_slow('0', 0)
+        self.mount.move_servo_slow('0', 90)
         self.car.set_motor_model(0,0,0,0)
         self.car.close()
         self.cam.close()

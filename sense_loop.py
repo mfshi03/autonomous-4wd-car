@@ -1,135 +1,97 @@
 import cv2
 import numpy as np
 import time
-import threading
-import tkinter as tk
-from PIL import Image, ImageTk
 from camera import Camera
 from motor import Ordinary_Car
 from servo import Servo
 
-class RobotApp:
-    def __init__(self, window, window_title):
-        self.window = window
-        self.window.title(window_title)
+def get_red_area(cam):
+    """Captures a frame and returns the area of the largest red object."""
+    frame_bytes = cam.get_frame()
+    nparr = np.frombuffer(frame_bytes, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if img is None:
+        return 0
 
-        # Initialize Hardware
-        self.car = Ordinary_Car()
-        self.mount = Servo()
-        self.cam = Camera(stream_size=(400, 300))
-        self.cam.start_stream()
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    # Define red range
+    mask = cv2.inRange(hsv, np.array([0, 120, 70]), np.array([10, 255, 255])) + \
+           cv2.inRange(hsv, np.array([170, 120, 70]), np.array([180, 255, 255]))
 
-        # UI Elements
-        self.label_video = tk.Label(window)
-        self.label_video.pack(padx=10, pady=10)
-        
-        self.status_text = tk.StringVar(value="Status: Initializing...")
-        self.label_status = tk.Label(window, textvariable=self.status_text, font=("Helvetica", 12))
-        self.label_status.pack(pady=5)
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if contours:
+        return cv2.contourArea(max(contours, key=cv2.contourArea))
+    return 0
 
-        self.btn_quit = tk.Button(window, text="Stop & Exit", command=self.on_closing, bg="red", fg="white")
-        self.btn_quit.pack(pady=10)
+def main():
+    car = Ordinary_Car()
+    mount = Servo()
+    cam = Camera(stream_size=(400, 300))
+    cam.start_stream()
+    step_interval = 30 # Your original 10-degree increments
+    smooth_delay = 0.01 # Delay between individual degree movements
+    settle_time = 0.2   # Time to wait before taking a picture
+    current_angle = 0 # Assuming we start at 0
 
-        # State variables
-        self.current_frame = None
-        self.running = True
+    try:
+        while True:
+            print("Scanning 0 to 180...")
+            best_angle = 0
+            max_area = 0
 
-        # Start Threads
-        self.logic_thread = threading.Thread(target=self.robot_logic, daemon=True)
-        self.logic_thread.start()
-        
-        # Start GUI Update Loop
-        self.update_gui()
 
-    def get_processed_frame(self):
-        """Captures frame, finds red area, and draws a circle on it for the GUI."""
-        frame_bytes = self.cam.get_frame()
-        nparr = np.frombuffer(frame_bytes, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            return 0, None
+            for target_angle in range(0, 181, step_interval):
+                # Move from current_angle to target_angle 1 degree at a time
+                print(f"At angle {target_angle}")
+                mount.move_servo_slow('0', target_angle)
 
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(hsv, np.array([0, 120, 70]), np.array([10, 255, 255])) + \
-               cv2.inRange(hsv, np.array([170, 120, 70]), np.array([180, 255, 255]))
+                # Give the camera a moment to stabilize
+                time.sleep(settle_time)
 
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        area = 0
-        if contours:
-            cnt = max(contours, key=cv2.contourArea)
-            area = cv2.contourArea(cnt)
-            # Draw a green outline around the red object for the GUI
-            x, y, w, h = cv2.boundingRect(cnt)
-            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv2.putText(img, f"Red Area: {int(area)}", (10, 30), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                # Check for the red object
+                area = get_red_area(cam)
+                if area > max_area:
+                    print(f"Found RED at {target_angle} degrees!")
+                    max_area = area
+                    best_angle = target_angle
 
-        return area, img
+            if max_area > 500:
+                print("FOUND RED > 500 px")
 
-    def robot_logic(self):
-        """The background thread that controls the physical robot movements."""
-        step_interval = 30
-        settle_time = 0.2
+            # # 2. DECIDE: If enough red is found (threshold 500)
+            # if max_area > 500:
+            #     print(f"Target found at {best_angle} degrees. Rotating car...")
 
-        try:
-            while self.running:
-                self.status_text.set("Status: Scanning 0-180...")
-                max_area = 0
-                best_angle = 90
+            #     # 3. ACT: Rotate chassis toward the best_angle
+            #     # Logic: If angle < 90, target is to the right. If > 90, to the left.
+            #     # Adjust sleep time based on your car's turn speed.
+            #     if best_angle < 80:
+            #         car.set_motor_model(2000, 2000, -2000, -2000) # Spin Right
+            #         time.sleep(abs(90 - best_angle) / 60) # Rough estimate for turn time
+            #     elif best_angle > 100:
+            #         car.set_motor_model(-2000, -2000, 2000, 2000) # Spin Left
+            #         time.sleep(abs(90 - best_angle) / 60)
 
-                for target_angle in range(0, 181, step_interval):
-                    if not self.running: break
-                    
-                    self.mount.move_servo_slow('0', target_angle)
-                    time.sleep(settle_time)
+            #     car.set_motor_model(0, 0, 0, 0) # Stop rotating
 
-                    area, img = self.get_processed_frame()
-                    self.current_frame = img # Update the frame shared with GUI
+            #     # 4. RESET: Pan camera mount back to center (90)
+            #     print("Resetting camera mount to center.")
+            #     mount.set_servo_pwm('0', 90)
+            #     time.sleep(0.5)
 
-                    if area > max_area:
-                        max_area = area
-                        best_angle = target_angle
-                        self.status_text.set(f"Target found at {best_angle}°")
+            #     # Move closer to the target now that we face it
+            #     car.set_motor_model(1800, 1800, 1800, 1800) # Forward
+            #     time.sleep(1)
+            #     car.set_motor_model(0, 0, 0, 0)
+            # else:
+            #     print("No red target found in scan.")
+            #     time.sleep(1)
 
-                if max_area > 500:
-                    self.status_text.set(f"LOCKED! Turning to {best_angle}°")
-                    # Put your car movement logic here (same as your original code)
-                    time.sleep(1) 
-                else:
-                    self.status_text.set("Status: No target found. Resting...")
-                    time.sleep(1)
+    except KeyboardInterrupt:
+        print("\nStopping...")
+    finally:
+        car.close()
+        cam.close()
 
-        except Exception as e:
-            print(f"Logic Error: {e}")
-
-    def update_gui(self):
-        """Updates the Tkinter label with the latest frame at ~30 FPS."""
-        if self.current_frame is not None:
-            # Convert BGR (OpenCV) to RGB (Tkinter)
-            img_rgb = cv2.cvtColor(self.current_frame, cv2.COLOR_BGR2RGB)
-            img_pil = Image.fromarray(img_rgb)
-            img_tk = ImageTk.PhotoImage(image=img_pil)
-            
-            self.label_video.imgtk = img_tk
-            self.label_video.configure(image=img_tk)
-        
-        if self.running:
-            self.window.after(30, self.update_gui)
-
-    def on_closing(self):
-        """Safely shuts down motors and camera."""
-        print("Shutting down...")
-        self.running = False
-        self.car.set_motor_model(0,0,0,0)
-        self.car.close()
-        self.cam.close()
-        self.window.destroy()
-
-# --- Execution ---
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = RobotApp(root, "Robot Red-Object Tracker")
-    root.protocol("WM_DELETE_WINDOW", app.on_closing)
-    root.mainloop()
+    main()

@@ -69,7 +69,29 @@ class Ordinary_Car:
         self.left_lower_wheel(duty2)
         self.right_upper_wheel(duty3)
         self.right_lower_wheel(duty4)
+   
+    def turn_angle(self, angle, turn_speed=1000):
+        """
+        In-place rotation only.
+        angle: 0 (hard left) to 180 (hard right), 90 is stop
+        turn_speed: max wheel speed magnitude
+        """
 
+        angle = max(0, min(180, angle))
+
+        rotation = (angle - 90) / 90.0
+        
+        # cancel out linear velocity
+        left_speed  = int(-rotation * turn_speed)
+        right_speed = int(rotation * turn_speed)
+
+        self.set_motor_model(
+            left_speed,   
+            left_speed,   
+            right_speed,  
+            right_speed   
+        )
+    
     def close(self):
         self.set_motor_model(0,0,0,0)
         self.pwm.close()
@@ -77,16 +99,29 @@ class Ordinary_Car:
 if __name__=='__main__':
     PWM = Ordinary_Car()          
     try:
-        PWM.set_motor_model(2000,2000,2000,2000)       #Forward
+        # PWM.set_motor_model(2000,2000,2000,2000)       #Forward
+        # time.sleep(1)
+        # PWM.set_motor_model(-2000,-2000,-2000,-2000)   #Back
+        # time.sleep(1)
+        # PWM.set_motor_model(-2000,-2000,2000,2000)     #Left 
+        # time.sleep(1)
+        # PWM.set_motor_model(2000,2000,-2000,-2000)     #Right    
+        # time.sleep(1)
+        # PWM.set_motor_model(0,0,0,0)                   #Stop
+        PWM.turn_angle(0)
         time.sleep(1)
-        PWM.set_motor_model(-2000,-2000,-2000,-2000)   #Back
+
+        PWM.turn_angle(45)
         time.sleep(1)
-        PWM.set_motor_model(-2000,-2000,2000,2000)     #Left 
+
+        PWM.turn_angle(90) 
         time.sleep(1)
-        PWM.set_motor_model(2000,2000,-2000,-2000)     #Right    
+
+        PWM.turn_angle(135)
         time.sleep(1)
-        PWM.set_motor_model(0,0,0,0)                   #Stop
-    except KeyboardInterrupt:  # When 'Ctrl+C' is pressed, the child program destroy() will be  executed.
+
+        PWM.turn_angle(180)
+    except KeyboardInterrupt: 
         print ("\nEnd of program")
     finally:
         PWM.close()
